@@ -1,0 +1,32 @@
+{{- if .Values.opsaix.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "opsaix.fullname" . }}
+  labels:
+    {{- include "opsaix.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "opsaix.fullname" . }}
+  minReplicas: {{ .Values.opsaix.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.opsaix.autoscaling.maxReplicas }}
+  metrics:
+    {{- if .Values.opsaix.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.opsaix.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if .Values.opsaix.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.opsaix.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}

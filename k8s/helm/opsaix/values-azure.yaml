@@ -1,0 +1,68 @@
+# Azure AKS specific values for OpsAiX
+
+global:
+  cloud: azure
+  storageClass: "managed-premium"
+
+opsaix:
+  replicaCount: 3
+  
+  # Azure-optimized resource configuration
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+    requests:
+      cpu: 1000m
+      memory: 2Gi
+
+# Azure Application Gateway ingress
+ingress:
+  enabled: true
+  className: "azure/application-gateway"
+  annotations:
+    appgw.ingress.kubernetes.io/ssl-redirect: "true"
+    appgw.ingress.kubernetes.io/backend-protocol: "http"
+    appgw.ingress.kubernetes.io/health-probe-path: "/health"
+  hosts:
+    - host: opsaix.yourdomain.com
+      paths:
+        - path: /
+          pathType: Prefix
+
+# Azure Database optimized PostgreSQL
+postgresql:
+  enabled: true
+  primary:
+    persistence:
+      enabled: true
+      storageClass: "managed-premium"
+      size: 20Gi
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+      requests:
+        cpu: 500m
+        memory: 1Gi
+
+# Azure Cache optimized Redis
+redis:
+  enabled: true
+  master:
+    persistence:
+      enabled: true
+      storageClass: "managed-premium"
+      size: 8Gi
+    resources:
+      limits:
+        cpu: 500m
+        memory: 1Gi
+      requests:
+        cpu: 250m
+        memory: 512Mi
+
+# Azure-specific node selector
+nodeSelector:
+  kubernetes.io/arch: amd64
+  node.kubernetes.io/instance-type: Standard_D2s_v3

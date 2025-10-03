@@ -1,0 +1,37 @@
+{{- if .Values.configMaps.create }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "opsaix.fullname" . }}-config
+  labels:
+    {{- include "opsaix.labels" . | nindent 4 }}
+data:
+  # Application configuration
+  APP_NAME: "OpsAiX"
+  APP_VERSION: {{ .Chart.AppVersion | quote }}
+  HOST: "0.0.0.0"
+  PORT: "8080"
+  
+  # Multi-cloud configuration
+  {{- if .Values.opsaix.multiCloud.enabled }}
+  MULTI_CLOUD_ENABLED: "true"
+  {{- range $provider, $regions := .Values.opsaix.multiCloud.regions }}
+  {{ upper $provider }}_REGIONS: {{ join "," $regions | quote }}
+  {{- end }}
+  {{- end }}
+  
+  # LangChain configuration
+  LANGCHAIN_MODEL: "gpt-4"
+  LANGCHAIN_TEMPERATURE: "0.1"
+  
+  # Vector DB configuration
+  CHROMA_PERSIST_DIRECTORY: "/app/chroma_db"
+  
+  # ITSM configuration
+  JIRA_ENABLED: "false"
+  SERVICENOW_ENABLED: "false"
+  
+  # ChatOps configuration
+  SLACK_ENABLED: "false"
+  TEAMS_ENABLED: "false"
+{{- end }}

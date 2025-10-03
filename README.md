@@ -29,6 +29,8 @@ Deploy seamlessly across any cloud provider with our container-first, Kubernetes
 | **Hybrid** 🔄 | K8s, Docker | Unified Dashboard | Multi-Region | Edge Computing |
 
 ### **🚀 Multi-Cloud Deployment Options**
+
+#### **Kubernetes + Helm (Recommended)**
 ```bash
 # Single-cloud deployment (choose your provider)
 ./deploy.sh --cloud aws --region us-east-1
@@ -40,6 +42,18 @@ Deploy seamlessly across any cloud provider with our container-first, Kubernetes
 
 # Hybrid cloud with on-premises
 ./deploy.sh --hybrid --on-premises k8s-cluster --cloud gcp
+```
+
+#### **Direct Helm Installation**
+```bash
+# Install with Helm (AWS example)
+helm install opsaix k8s/helm/opsaix/ \
+  --namespace opsaix \
+  --create-namespace \
+  --values k8s/helm/opsaix/values-aws.yaml
+
+# Or use Docker Compose for local development  
+docker compose up
 ```
 
 ***
@@ -56,6 +70,31 @@ Deploy seamlessly across any cloud provider with our container-first, Kubernetes
 | **📊 Dashboard** | Gradio UI with real-time metrics | Multi-cloud infrastructure visibility |
 | **🚨 Alerting** | Smart escalation & anomaly detection | Cloud-agnostic alerting and routing |
 | **🔐 Security** | RBAC, OAuth/SAML, compliance | Unified security across cloud boundaries |
+| **☸️ Kubernetes** | Production-ready Helm charts | Native cloud orchestration and scaling |
+
+### **☸️ Kubernetes-Native Architecture**
+
+#### **Enterprise-Grade Orchestration**
+- **Helm Charts**: Production-ready charts for all cloud providers
+- **Auto-scaling**: HPA with CPU/memory targets and custom metrics  
+- **High Availability**: Multi-replica deployments with pod disruption budgets
+- **Rolling Updates**: Zero-downtime deployments and upgrades
+- **Health Checks**: Comprehensive liveness and readiness probes
+
+#### **Cloud-Specific Optimizations**
+| Provider | Ingress Controller | Storage | Load Balancer | Monitoring |
+|----------|-------------------|---------|---------------|-------------|
+| **AWS EKS** | ALB Controller | EBS CSI (gp3) | Application LB | CloudWatch |
+| **Azure AKS** | App Gateway | Premium SSD | Standard LB | App Insights |
+| **GCP GKE** | GCE Controller | Persistent Disk | Cloud LB | Cloud Monitoring |
+
+```bash
+# Deploy with cloud-specific optimizations
+helm install opsaix k8s/helm/opsaix/ \
+  --values k8s/helm/opsaix/values-aws.yaml    # AWS optimized
+  --values k8s/helm/opsaix/values-azure.yaml  # Azure optimized  
+  --values k8s/helm/opsaix/values-gcp.yaml    # GCP optimized
+```
 
 ### **🌩️ Multi-Cloud Data Sources**
 ```yaml

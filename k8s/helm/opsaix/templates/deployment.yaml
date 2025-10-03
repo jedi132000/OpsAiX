@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "opsaix.fullname" . }}
+  labels:
+    {{- include "opsaix.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.opsaix.autoscaling.enabled }}
+  replicas: {{ .Values.opsaix.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "opsaix.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+      labels:
+        {{- include "opsaix.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.opsaix.image.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "opsaix.serviceAccountName" . }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 2000
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+          image: "{{ .Values.opsaix.image.registry }}/{{ .Values.opsaix.image.repository }}:{{ .Values.opsaix.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.opsaix.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: DATABASE_URL
+              value: "postgresql://{{ .Values.postgresql.auth.username }}:{{ .Values.postgresql.auth.password }}@{{ include "opsaix.fullname" . }}-postgresql:5432/{{ .Values.postgresql.auth.database }}"
+            - name: REDIS_URL
+              value: "redis://:{{ .Values.redis.auth.password }}@{{ include "opsaix.fullname" . }}-redis-master:6379/0"
+            - name: LOG_LEVEL
+              value: {{ .Values.opsaix.config.logLevel }}
+            - name: DEBUG
+              value: "{{ .Values.opsaix.config.debug }}"
+            - name: PYTHONPATH
+              value: "/app"
+          envFrom:
+            - configMapRef:
+                name: {{ include "opsaix.fullname" . }}-config
+            - secretRef:
+                name: {{ include "opsaix.fullname" . }}-secret
+          livenessProbe:
+            {{- toYaml .Values.opsaix.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.opsaix.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.opsaix.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: logs
+              mountPath: /app/logs
+            - name: chroma-db
+              mountPath: /app/chroma_db
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: logs
+          emptyDir: {}
+        - name: chroma-db
+          persistentVolumeClaim:
+            claimName: {{ include "opsaix.fullname" . }}-chroma-pvc
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

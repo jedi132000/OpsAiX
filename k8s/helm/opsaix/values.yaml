@@ -1,0 +1,223 @@
+# Default values for OpsAiX
+# This is a YAML-formatted file.
+
+# Global configuration
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+  storageClass: ""
+
+# OpsAiX application configuration
+opsaix:
+  image:
+    registry: ghcr.io
+    repository: jedi132000/opsaix
+    tag: "latest"
+    pullPolicy: IfNotPresent
+    pullSecrets: []
+  
+  replicaCount: 3
+  
+  # Environment configuration
+  config:
+    debug: false
+    logLevel: "INFO"
+    openaiApiKey: ""  # Set via secret
+    secretKey: ""     # Set via secret
+  
+  # Multi-cloud configuration
+  multiCloud:
+    enabled: true
+    regions:
+      aws:
+        - us-east-1
+        - us-west-2
+      azure:
+        - eastus
+        - westus2
+      gcp:
+        - us-central1
+        - us-west1
+  
+  # Resource requirements
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+    requests:
+      cpu: 1000m
+      memory: 2Gi
+  
+  # Health checks
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 8080
+    initialDelaySeconds: 30
+    periodSeconds: 10
+  
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: 8080
+    initialDelaySeconds: 5
+    periodSeconds: 5
+  
+  # Autoscaling
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 8080
+  targetPort: 8080
+  annotations: {}
+
+# Ingress configuration
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: opsaix.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: opsaix-tls
+      hosts:
+        - opsaix.example.com
+
+# PostgreSQL configuration (using Bitnami chart)
+postgresql:
+  enabled: true
+  auth:
+    enablePostgresUser: true
+    postgresPassword: "opsaix-postgres"
+    username: "opsaix"
+    password: "opsaix-password"
+    database: "opsaix"
+  primary:
+    persistence:
+      enabled: true
+      size: 20Gi
+      storageClass: ""
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+      requests:
+        cpu: 500m
+        memory: 512Mi
+
+# Redis configuration (using Bitnami chart)
+redis:
+  enabled: true
+  auth:
+    enabled: true
+    password: "opsaix-redis"
+  master:
+    persistence:
+      enabled: true
+      size: 8Gi
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 250m
+        memory: 256Mi
+
+# Elasticsearch configuration (optional)
+elasticsearch:
+  enabled: false
+  master:
+    replicaCount: 3
+    persistence:
+      enabled: true
+      size: 10Gi
+  data:
+    replicaCount: 3
+    persistence:
+      enabled: true
+      size: 50Gi
+
+# AI Agents configuration
+agents:
+  # Incident Detection Agent
+  incidentDetection:
+    enabled: true
+    replicaCount: 2
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+      requests:
+        cpu: 500m
+        memory: 1Gi
+  
+  # Incident Analysis Agent
+  incidentAnalysis:
+    enabled: true
+    replicaCount: 2
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+      requests:
+        cpu: 500m
+        memory: 1Gi
+
+# Monitoring and observability
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+  grafana:
+    enabled: true
+    adminPassword: "admin"
+  jaeger:
+    enabled: true
+
+# Security configuration
+security:
+  podSecurityPolicy:
+    enabled: false
+  networkPolicy:
+    enabled: true
+  rbac:
+    create: true
+  serviceAccount:
+    create: true
+    name: ""
+    annotations: {}
+
+# Node selector and tolerations
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Pod disruption budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+# Secrets (use external secret management in production)
+secrets:
+  create: true
+  openaiApiKey: ""
+  jiraToken: ""
+  slackBotToken: ""
+  secretKey: ""
+
+# ConfigMaps
+configMaps:
+  create: true

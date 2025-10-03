@@ -1,0 +1,68 @@
+# Google GKE specific values for OpsAiX
+
+global:
+  cloud: gcp
+  storageClass: "standard-rwo"
+
+opsaix:
+  replicaCount: 3
+  
+  # GCP-optimized resource configuration
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+    requests:
+      cpu: 1000m
+      memory: 2Gi
+
+# GCE ingress controller
+ingress:
+  enabled: true
+  className: "gce"
+  annotations:
+    kubernetes.io/ingress.global-static-ip-name: "opsaix-ip"
+    networking.gke.io/managed-certificates: "opsaix-ssl-cert"
+    kubernetes.io/ingress.class: "gce"
+  hosts:
+    - host: opsaix.yourdomain.com
+      paths:
+        - path: /
+          pathType: Prefix
+
+# Google Cloud SQL optimized PostgreSQL
+postgresql:
+  enabled: true
+  primary:
+    persistence:
+      enabled: true
+      storageClass: "standard-rwo"
+      size: 20Gi
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+      requests:
+        cpu: 500m
+        memory: 1Gi
+
+# Google Memorystore optimized Redis
+redis:
+  enabled: true
+  master:
+    persistence:
+      enabled: true
+      storageClass: "standard-rwo"
+      size: 8Gi
+    resources:
+      limits:
+        cpu: 500m
+        memory: 1Gi
+      requests:
+        cpu: 250m
+        memory: 512Mi
+
+# GCP-specific node selector
+nodeSelector:
+  kubernetes.io/arch: amd64
+  node.kubernetes.io/instance-type: e2-medium

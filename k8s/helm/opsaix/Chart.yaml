@@ -1,0 +1,36 @@
+apiVersion: v2
+name: opsaix
+description: AI-Powered Multi-Cloud Incident Response Platform
+version: 0.1.0
+appVersion: "0.1.0"
+type: application
+home: https://github.com/jedi132000/OpsAiX
+sources:
+  - https://github.com/jedi132000/OpsAiX
+maintainers:
+  - name: OpsAiX Team
+    email: team@opsaix.com
+keywords:
+  - incident-response
+  - ai
+  - langchain
+  - multi-cloud
+  - devops
+  - monitoring
+  - chatops
+annotations:
+  category: DevOps
+  licenses: MIT
+dependencies:
+  - name: postgresql
+    version: "12.x.x"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: postgresql.enabled
+  - name: redis
+    version: "18.x.x"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: redis.enabled
+  - name: elasticsearch
+    version: "19.x.x"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: elasticsearch.enabled
