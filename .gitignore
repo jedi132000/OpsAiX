@@ -79,11 +79,18 @@ Thumbs.db
 logs/
 
 # Configuration files with secrets
-.env.local
-.env.production
+.env.*
+!.env.example
 config/secrets/
 *.key
 *.pem
+credentials.json
+
+# Test files (may contain sensitive data)
+tests/
+*.test.py
+test_*.py
+*_test.py
 
 # Database
 *.db
