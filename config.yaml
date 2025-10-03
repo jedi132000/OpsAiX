@@ -1,0 +1,86 @@
+# OpsAiX Configuration
+app:
+  name: "OpsAiX"
+  version: "0.1.0"
+  debug: true
+  host: "0.0.0.0"
+  port: 8080
+
+# LangChain Configuration
+langchain:
+  model_provider: "openai"  # openai, anthropic, ollama
+  model_name: "gpt-4"
+  temperature: 0.1
+  max_tokens: 2048
+  
+# Vector Database Configuration
+vector_db:
+  provider: "chroma"  # chroma, faiss, pinecone
+  collection_name: "opsaix_knowledge"
+  embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
+  persist_directory: "./chroma_db"
+
+# Data Sources Configuration
+data_sources:
+  elasticsearch:
+    enabled: false
+    hosts: []
+    username: ""
+    password: ""
+    
+  datadog:
+    enabled: false
+    api_key: ""
+    app_key: ""
+    site: "datadoghq.com"
+    
+  prometheus:
+    enabled: false
+    url: ""
+    username: ""
+    password: ""
+
+# ITSM Integration Configuration
+itsm:
+  jira:
+    enabled: false
+    url: ""
+    username: ""
+    token: ""
+    project_key: ""
+    
+  servicenow:
+    enabled: false
+    instance_url: ""
+    username: ""
+    password: ""
+    table: "incident"
+
+# ChatOps Configuration
+chatops:
+  slack:
+    enabled: false
+    bot_token: ""
+    app_token: ""
+    signing_secret: ""
+    
+  teams:
+    enabled: false
+    bot_id: ""
+    bot_password: ""
+
+# Security Configuration
+security:
+  secret_key: "change-me-in-production"
+  algorithm: "HS256"
+  access_token_expire_minutes: 30
+  
+auth:
+  provider: "local"  # local, oauth, saml, ldap
+  require_auth: false
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "json"
+  file: "logs/opsaix.log"
