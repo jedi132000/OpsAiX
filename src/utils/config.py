@@ -124,6 +124,7 @@ class OpsAiXConfig(BaseSettings):
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
+        extra = "ignore"  # Allow extra fields from environment
 
 
 def load_config(config_path: str = "config.yaml") -> OpsAiXConfig:
