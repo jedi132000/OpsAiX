@@ -1,7 +1,3 @@
-e’s your **complete GitHub-ready README.md**—emoji-rich, fully customized, and with the Contributors section removed:
-
-***
-
 # 🚨 OpsAiX - AI-Powered Multi-Cloud Incident Response Platform 🚀
 
 > **Transform your operations with agentic GenAI, enterprise integrations, and multi-cloud deployment.**
