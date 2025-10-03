@@ -61,6 +61,61 @@ def create_app() -> FastAPI:
         """Root endpoint"""
         return {"message": "Welcome to OpsAiX - AI-Powered Incident Response Platform"}
     
+    @app.post("/api/analyze-logs")
+    async def analyze_logs(request: dict):
+        """API endpoint to analyze logs for incidents"""
+        try:
+            from src.agents.incident_detection_agent import IncidentDetectionAgent
+            
+            logs = request.get("logs", "")
+            if not logs:
+                return {"error": "No logs provided"}
+            
+            detection_agent = IncidentDetectionAgent(config)
+            result = await detection_agent.process(logs)
+            
+            return {
+                "success": True,
+                "result": result
+            }
+            
+        except Exception as e:
+            logger.error("API log analysis failed", error=str(e))
+            return {"success": False, "error": str(e)}
+    
+    @app.get("/api/integrations/status")
+    async def integrations_status():
+        """Check status of integrations"""
+        try:
+            from src.integrations.itsm.jira_integration import JiraIntegration
+            from src.integrations.chatops.slack_integration import SlackIntegration
+            
+            status = {
+                "jira": {
+                    "enabled": config.itsm.jira.enabled,
+                    "configured": bool(config.itsm.jira.url and config.itsm.jira.username),
+                },
+                "slack": {
+                    "enabled": config.chatops.slack.enabled,
+                    "configured": bool(config.chatops.slack.bot_token),
+                }
+            }
+            
+            # Test connections if configured
+            if status["jira"]["configured"]:
+                jira_integration = JiraIntegration(config)
+                status["jira"]["connection_test"] = await jira_integration.test_connection()
+            
+            if status["slack"]["configured"]:
+                slack_integration = SlackIntegration(config)
+                status["slack"]["connection_test"] = await slack_integration.test_connection()
+            
+            return status
+            
+        except Exception as e:
+            logger.error("Integration status check failed", error=str(e))
+            return {"error": str(e)}
+    
     return app
 
 def main():

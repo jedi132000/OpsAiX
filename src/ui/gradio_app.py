@@ -1,11 +1,23 @@
 """
 Gradio-based dashboard for OpsAiX
 """
+import asyncio
+import json
 import gradio as gr
 import structlog
 from datetime import datetime
+from typing import Dict, Any, Optional
+
+from src.utils.config import load_config
+from src.agents.incident_detection_agent import IncidentDetectionAgent
+from src.agents.incident_analysis_agent import IncidentAnalysisAgent
+from src.integrations.itsm.jira_integration import JiraIntegration
+from src.integrations.chatops.slack_integration import SlackIntegration
 
 logger = structlog.get_logger()
+
+# Global config instance
+config = load_config()
 
 
 def create_gradio_app() -> gr.Blocks:
@@ -155,22 +167,76 @@ def get_recent_alerts_html() -> str:
 
 
 def analyze_incident(log_data: str) -> str:
-    """Analyze log data for potential incidents"""
+    """Analyze log data for potential incidents using AI agents"""
     if not log_data.strip():
         return "<p><em>Please provide log data or metric query to analyze</em></p>"
     
-    # Placeholder analysis - would integrate with LangChain agents
-    logger.info("Analyzing incident data", data_length=len(log_data))
+    try:
+        # Run incident detection asynchronously
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        # Create detection agent and analyze
+        detection_agent = IncidentDetectionAgent(config)
+        result = loop.run_until_complete(detection_agent.process(log_data))
+        
+        loop.close()
+        
+        # Format results
+        detection = result.get("detection_result", {})
+        incident_data = result.get("incident")
+        
+        if detection.get("incident_detected", False):
+            # Incident detected
+            confidence = detection.get("confidence_score", 0.0)
+            severity = detection.get("severity", "unknown")
+            
+            # Try to create JIRA ticket if incident was created
+            jira_status = ""
+            if incident_data and config.itsm.jira.enabled:
+                try:
+                    jira_integration = JiraIntegration(config)
+                    # Note: This is simplified - in production you'd handle this differently
+                    jira_status = "<p><strong>JIRA Integration:</strong> ✅ Ready (ticket creation would happen in full workflow)</p>"
+                except Exception:
+                    jira_status = "<p><strong>JIRA Integration:</strong> ⚠️ Not configured</p>"
+            
+            return f"""
+            <div style="padding: 15px; border-radius: 5px; background-color: #fff8dc; border-left: 4px solid #ff8c00;">
+                <h4>🚨 Incident Detected!</h4>
+                <p><strong>Severity:</strong> <span style="color: red;">{severity.upper()}</span></p>
+                <p><strong>Confidence:</strong> {confidence:.1%}</p>
+                <p><strong>Title:</strong> {detection.get('title', 'Untitled Incident')}</p>
+                <p><strong>Description:</strong> {detection.get('description', 'No description available')}</p>
+                <p><strong>Recommended Actions:</strong></p>
+                <ul>
+                    {"".join([f"<li>{action}</li>" for action in detection.get('recommended_actions', ['No actions suggested'])])}
+                </ul>
+                {jira_status}
+                <p><strong>Analysis time:</strong> {datetime.now().strftime('%H:%M:%S')}</p>
+            </div>
+            """
+        else:
+            # No incident detected
+            return f"""
+            <div style="padding: 10px; border-radius: 5px; background-color: #f8fff8;">
+                <h4>📋 Analysis Results</h4>
+                <p><strong>Status:</strong> <span style="color: green;">✅ No critical incidents detected</span></p>
+                <p><strong>Confidence:</strong> {detection.get('confidence_score', 0.0):.1%}</p>
+                <p><strong>Data processed:</strong> {len(log_data)} characters</p>
+                <p><strong>Analysis time:</strong> {datetime.now().strftime('%H:%M:%S')}</p>
+            </div>
+            """
     
-    return f"""
-    <div style="padding: 10px; border-radius: 5px; background-color: #f8fff8;">
-        <h4>📋 Analysis Results</h4>
-        <p><strong>Status:</strong> <span style="color: green;">✅ No critical incidents detected</span></p>
-        <p><strong>Data processed:</strong> {len(log_data)} characters</p>
-        <p><strong>Analysis time:</strong> {datetime.now().strftime('%H:%M:%S')}</p>
-        <p><em>Advanced AI analysis with LangChain agents will be implemented here</em></p>
-    </div>
-    """
+    except Exception as e:
+        logger.error("Incident analysis failed", error=str(e))
+        return f"""
+        <div style="padding: 10px; border-radius: 5px; background-color: #ffe6e6;">
+            <h4>❌ Analysis Error</h4>
+            <p><strong>Error:</strong> {str(e)}</p>
+            <p><em>Please check your configuration and try again</em></p>
+        </div>
+        """
 
 
 def send_chatops_message(incident_id: str, message: str, channel: str) -> str:
@@ -178,18 +244,37 @@ def send_chatops_message(incident_id: str, message: str, channel: str) -> str:
     if not incident_id or not message:
         return "<p><em>Please provide incident ID and message</em></p>"
     
-    logger.info("Sending ChatOps message", incident_id=incident_id, channel=channel)
+    try:
+        # Test Slack integration
+        slack_status = "❌ Not configured"
+        if config.chatops.slack.enabled and config.chatops.slack.bot_token:
+            slack_integration = SlackIntegration(config)
+            slack_status = "✅ Ready"
+        
+        logger.info("ChatOps message prepared", incident_id=incident_id, channel=channel)
+        
+        return f"""
+        <div style="padding: 10px; border-radius: 5px; background-color: #f0f8ff;">
+            <h4>📤 ChatOps Message</h4>
+            <p><strong>Incident:</strong> {incident_id}</p>
+            <p><strong>Channel:</strong> {channel}</p>
+            <p><strong>Message:</strong> "{message}"</p>
+            <p><strong>Slack Integration:</strong> {slack_status}</p>
+            <p><strong>Time:</strong> {datetime.now().strftime('%H:%M:%S')}</p>
+            <div style="margin-top: 10px; padding: 8px; background-color: #e8f4f8; border-radius: 3px;">
+                <p><small><strong>Note:</strong> In production, this would send the message to the configured Slack channel and create or update an incident thread.</small></p>
+            </div>
+        </div>
+        """
     
-    return f"""
-    <div style="padding: 10px; border-radius: 5px; background-color: #f0f8ff;">
-        <h4>📤 Message Sent</h4>
-        <p><strong>Incident:</strong> {incident_id}</p>
-        <p><strong>Channel:</strong> {channel}</p>
-        <p><strong>Time:</strong> {datetime.now().strftime('%H:%M:%S')}</p>
-        <p><strong>Message:</strong> "{message}"</p>
-        <p><em>ChatOps integration will be implemented here</em></p>
-    </div>
-    """
+    except Exception as e:
+        logger.error("ChatOps message failed", error=str(e))
+        return f"""
+        <div style="padding: 10px; border-radius: 5px; background-color: #ffe6e6;">
+            <h4>❌ ChatOps Error</h4>
+            <p><strong>Error:</strong> {str(e)}</p>
+        </div>
+        """
 
 
 def search_knowledge_base(query: str) -> str:

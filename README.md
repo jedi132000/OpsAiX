@@ -33,19 +33,48 @@ Integrate with: Jira, ServiceNow, Slack, Teams, and more! 💼
 
 ## 🧑‍🎓 Getting Started
 
-1. **Fork/Clone Repo**  
+### Quick Start (Development)
+1. **Clone & Setup**  
    ```bash
-   git clone https://github.com/YOUR_ORG/inc-response-gem.git
+   git clone https://github.com/YOUR_ORG/opsaix.git
+   cd opsaix
    ```
-2. **Run Container Locally**  
+
+2. **Start Development Environment**  
    ```bash
-   docker compose up
+   ./start.sh
    ```
-3. **Configure Integrations**  
-   - Edit `config.yaml` for log sources, ITSM, and ChatOps credentials.
-   - Invite bot to your chat channel(s)!
-4. **Access Dashboard**  
-   - Default at `http://localhost:8080` 🎉
+   This creates a virtual environment, installs dependencies, and launches the server.
+
+3. **Access Dashboard**  
+   - Web UI: `http://localhost:8080` 🎉
+   - API Docs: `http://localhost:8080/docs`
+
+### Configuration
+1. **Copy Environment File**  
+   ```bash
+   cp .env.example .env
+   ```
+
+2. **Configure Integrations** (Optional)  
+   Edit `.env` file with your credentials:
+   - **JIRA**: Set `JIRA_URL`, `JIRA_USERNAME`, `JIRA_API_TOKEN`
+   - **Slack**: Set `SLACK_BOT_TOKEN`, `SLACK_APP_TOKEN`
+   - **OpenAI**: Set `OPENAI_API_KEY` for AI agents
+
+3. **Test Components**  
+   ```bash
+   python tests/test_agents.py
+   ```
+
+### Docker Deployment
+```bash
+# Full stack with PostgreSQL, Redis, ELK
+docker compose up
+
+# ELK stack for log analysis
+docker compose --profile elk up
+```
 
 ***
 
