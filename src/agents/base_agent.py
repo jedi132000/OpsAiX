@@ -22,11 +22,20 @@ class BaseAgent(ABC):
         self.logger = structlog.get_logger().bind(agent=name)
         
         # Initialize LLM
-        self.llm = ChatOpenAI(
-            model=config.langchain.model_name,
-            temperature=config.langchain.temperature,
-            max_tokens=config.langchain.max_tokens,
-        )
+        import os
+        
+        llm_kwargs = {
+            "model": config.langchain.model_name,
+            "temperature": config.langchain.temperature,
+            "max_tokens": config.langchain.max_tokens,
+        }
+        
+        # Get API key from config or environment
+        api_key = config.langchain.openai_api_key or os.getenv("OPENAI_API_KEY")
+        if api_key:
+            llm_kwargs["api_key"] = api_key
+            
+        self.llm = ChatOpenAI(**llm_kwargs)
     
     @abstractmethod
     async def process(self, input_data: Any, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:

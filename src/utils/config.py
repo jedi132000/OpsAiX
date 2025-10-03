@@ -1,10 +1,10 @@
 """
 Configuration management for OpsAiX
 """
-from typing import List
+from typing import List, Optional
 import yaml
 from pathlib import Path
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings
 
 
@@ -21,6 +21,7 @@ class LangChainConfig(BaseModel):
     model_name: str = "gpt-4"
     temperature: float = 0.1
     max_tokens: int = 2048
+    openai_api_key: Optional[str] = Field(None, alias="OPENAI_API_KEY")
 
 
 class VectorDbConfig(BaseModel):
@@ -121,14 +122,20 @@ class OpsAiXConfig(BaseSettings):
     auth: AuthConfig = AuthConfig()
     logging: LoggingConfig = LoggingConfig()
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        extra = "ignore"  # Allow extra fields from environment
+    model_config = {
+        "env_file": ".env",
+        "env_file_encoding": "utf-8", 
+        "extra": "ignore",  # Allow extra fields from environment
+        "env_nested_delimiter": "__"
+    }
 
 
 def load_config(config_path: str = "config.yaml") -> OpsAiXConfig:
     """Load configuration from YAML file and environment variables"""
+    from dotenv import load_dotenv
+    
+    # Load environment variables from .env file
+    load_dotenv()
     
     config_file = Path(config_path)
     config_data = {}
