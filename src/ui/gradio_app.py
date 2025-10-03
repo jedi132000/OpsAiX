@@ -191,50 +191,202 @@ def analyze_incident(log_data: str) -> str:
             confidence = detection.get("confidence_score", 0.0)
             severity = detection.get("severity", "unknown")
             
+            # Format description with better line breaks and readability
+            description = detection.get('description', 'No description available')
+            # Clean up the description and add proper formatting
+            description = description.strip()
+            
+            # Break long sentences into readable chunks
+            if len(description) > 150:
+                # Split by sentences and add line breaks
+                sentences = description.split('. ')
+                formatted_sentences = []
+                for sentence in sentences:
+                    sentence = sentence.strip()
+                    if sentence and not sentence.endswith('.'):
+                        sentence += '.'
+                    formatted_sentences.append(sentence)
+                
+                # Group sentences into paragraphs (every 2-3 sentences)
+                paragraphs = []
+                current_paragraph = []
+                for i, sentence in enumerate(formatted_sentences):
+                    current_paragraph.append(sentence)
+                    # Create paragraph break every 2 sentences or if sentence is very long
+                    if (i + 1) % 2 == 0 or len(sentence) > 120:
+                        paragraphs.append(' '.join(current_paragraph))
+                        current_paragraph = []
+                
+                # Add remaining sentences
+                if current_paragraph:
+                    paragraphs.append(' '.join(current_paragraph))
+                
+                description = '<br><br>'.join(paragraphs)
+            
+            # Ensure proper spacing around key terms
+            description = description.replace('Redis', '<strong>Redis</strong>')
+            description = description.replace('database', '<strong>database</strong>')
+            description = description.replace('API', '<strong>API</strong>')
+            description = description.replace('memory', '<strong>memory</strong>')
+            
+            # Format recommended actions with better readability
+            actions = detection.get('recommended_actions', ['No actions suggested'])
+            actions_html = ""
+            for i, action in enumerate(actions, 1):
+                # Clean and format action text
+                clean_action = action.strip()
+                # Break long actions into multiple lines if needed
+                if len(clean_action) > 80:
+                    words = clean_action.split(' ')
+                    lines = []
+                    current_line = []
+                    current_length = 0
+                    
+                    for word in words:
+                        if current_length + len(word) + 1 > 80 and current_line:
+                            lines.append(' '.join(current_line))
+                            current_line = [word]
+                            current_length = len(word)
+                        else:
+                            current_line.append(word)
+                            current_length += len(word) + 1
+                    
+                    if current_line:
+                        lines.append(' '.join(current_line))
+                    
+                    formatted_action = '<br>'.join(lines)
+                else:
+                    formatted_action = clean_action
+                
+                actions_html += f"""
+                <div style='margin: 12px 0; padding: 16px; background: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);'>
+                    <div style='display: flex; align-items: flex-start; gap: 12px;'>
+                        <div style='background: #2196f3; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; flex-shrink: 0;'>{i}</div>
+                        <div style='flex: 1;'>
+                            <p style='margin: 0; font-size: 15px; line-height: 1.6; color: #333; word-wrap: break-word;'>{formatted_action}</p>
+                        </div>
+                    </div>
+                </div>
+                """
+            
+            # Format affected components
+            components = detection.get('affected_components', [])
+            components_html = ""
+            if components:
+                components_html = f"""
+                <p><strong>Affected Components:</strong></p>
+                <div style="margin: 10px 0;">
+                    {"".join([f"<span style='display: inline-block; margin: 4px; padding: 4px 8px; background: #e3f2fd; border-radius: 12px; font-size: 12px;'>{comp}</span>" for comp in components])}
+                </div>
+                """
+            
             # Try to create JIRA ticket if incident was created
             jira_status = ""
             if incident_data and config.itsm.jira.enabled:
                 try:
                     jira_integration = JiraIntegration(config)
-                    # Note: This is simplified - in production you'd handle this differently
-                    jira_status = "<p><strong>JIRA Integration:</strong> ✅ Ready (ticket creation would happen in full workflow)</p>"
+                    jira_status = "<p style='color: #2e7d32;'><strong>✅ JIRA Integration:</strong> Ready (ticket creation would happen in full workflow)</p>"
                 except Exception:
-                    jira_status = "<p><strong>JIRA Integration:</strong> ⚠️ Not configured</p>"
+                    jira_status = "<p style='color: #f57c00;'><strong>⚠️ JIRA Integration:</strong> Not configured</p>"
             
             return f"""
-            <div style="padding: 15px; border-radius: 5px; background-color: #fff8dc; border-left: 4px solid #ff8c00;">
-                <h4>🚨 Incident Detected!</h4>
-                <p><strong>Severity:</strong> <span style="color: red;">{severity.upper()}</span></p>
-                <p><strong>Confidence:</strong> {confidence:.1%}</p>
-                <p><strong>Title:</strong> {detection.get('title', 'Untitled Incident')}</p>
-                <p><strong>Description:</strong> {detection.get('description', 'No description available')}</p>
-                <p><strong>Recommended Actions:</strong></p>
-                <ul>
-                    {"".join([f"<li>{action}</li>" for action in detection.get('recommended_actions', ['No actions suggested'])])}
-                </ul>
+            <div style="padding: 20px; border-radius: 8px; background: linear-gradient(135deg, #fff8dc 0%, #ffeaa7 100%); border-left: 6px solid #ff8c00; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <h3 style="color: #d32f2f; margin-top: 0;">🚨 Critical Incident Detected!</h3>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 15px 0;">
+                    <div><strong>Severity:</strong> <span style="color: #d32f2f; font-size: 16px; font-weight: bold;">{severity.upper()}</span></div>
+                    <div><strong>Confidence:</strong> <span style="color: #2e7d32; font-size: 16px; font-weight: bold;">{confidence:.1%}</span></div>
+                </div>
+                
+                <div style="margin: 15px 0; padding: 12px; background: white; border-radius: 6px;">
+                    <p style="margin: 0;"><strong style="color: #1976d2;">Title:</strong></p>
+                    <p style="font-size: 16px; margin: 5px 0 0 0; color: #333;">{detection.get('title', 'Untitled Incident')}</p>
+                </div>
+                
+                <div style="margin: 15px 0; padding: 12px; background: white; border-radius: 6px;">
+                    <p style="margin: 0;"><strong style="color: #1976d2;">Description:</strong></p>
+                    <p style="font-size: 14px; line-height: 1.6; margin: 8px 0 0 0; color: #444;">{description}</p>
+                </div>
+                
+                {components_html}
+                
+                <div style="margin: 20px 0;">
+                    <div style="margin: 0 0 16px 0; padding: 12px; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #2196f3;">
+                        <h4 style="margin: 0; color: #1565c0; font-size: 18px;">🎯 Recommended Actions</h4>
+                        <p style="margin: 4px 0 0 0; font-size: 14px; color: #666;">Follow these steps to resolve the incident:</p>
+                    </div>
+                    {actions_html}
+                </div>
+                
                 {jira_status}
-                <p><strong>Analysis time:</strong> {datetime.now().strftime('%H:%M:%S')}</p>
+                
+                <div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #ddd; font-size: 12px; color: #666;">
+                    <strong>Analysis completed at:</strong> {datetime.now().strftime('%H:%M:%S')} | <strong>Agent:</strong> IncidentDetectionAgent
+                </div>
             </div>
             """
         else:
             # No incident detected
             return f"""
-            <div style="padding: 10px; border-radius: 5px; background-color: #f8fff8;">
-                <h4>📋 Analysis Results</h4>
-                <p><strong>Status:</strong> <span style="color: green;">✅ No critical incidents detected</span></p>
-                <p><strong>Confidence:</strong> {detection.get('confidence_score', 0.0):.1%}</p>
-                <p><strong>Data processed:</strong> {len(log_data)} characters</p>
-                <p><strong>Analysis time:</strong> {datetime.now().strftime('%H:%M:%S')}</p>
+            <div style="padding: 20px; border-radius: 8px; background: linear-gradient(135deg, #f8fff8 0%, #c8e6c9 100%); border-left: 6px solid #4caf50; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <h3 style="color: #2e7d32; margin-top: 0;">📋 Analysis Complete</h3>
+                
+                <div style="display: flex; align-items: center; margin: 15px 0; padding: 12px; background: white; border-radius: 6px;">
+                    <div style="font-size: 24px; margin-right: 12px;">✅</div>
+                    <div>
+                        <p style="margin: 0; font-size: 16px; font-weight: bold; color: #2e7d32;">No Critical Incidents Detected</p>
+                        <p style="margin: 5px 0 0 0; font-size: 14px; color: #666;">Your systems appear to be operating normally</p>
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin: 15px 0;">
+                    <div style="text-align: center; padding: 10px; background: white; border-radius: 6px;">
+                        <div style="font-size: 18px; font-weight: bold; color: #2e7d32;">{detection.get('confidence_score', 0.0):.1%}</div>
+                        <div style="font-size: 12px; color: #666;">Confidence</div>
+                    </div>
+                    <div style="text-align: center; padding: 10px; background: white; border-radius: 6px;">
+                        <div style="font-size: 18px; font-weight: bold; color: #1976d2;">{len(log_data):,}</div>
+                        <div style="font-size: 12px; color: #666;">Characters Analyzed</div>
+                    </div>
+                    <div style="text-align: center; padding: 10px; background: white; border-radius: 6px;">
+                        <div style="font-size: 18px; font-weight: bold; color: #f57c00;">{datetime.now().strftime('%H:%M:%S')}</div>
+                        <div style="font-size: 12px; color: #666;">Analysis Time</div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 15px; padding: 12px; background: rgba(255,255,255,0.7); border-radius: 6px;">
+                    <p style="margin: 0; font-size: 14px; color: #555;">
+                        <strong>💡 Tip:</strong> The AI analyzed your logs and found no patterns indicating critical incidents. 
+                        Continue monitoring for proactive issue detection.
+                    </p>
+                </div>
             </div>
             """
     
     except Exception as e:
         logger.error("Incident analysis failed", error=str(e))
         return f"""
-        <div style="padding: 10px; border-radius: 5px; background-color: #ffe6e6;">
-            <h4>❌ Analysis Error</h4>
-            <p><strong>Error:</strong> {str(e)}</p>
-            <p><em>Please check your configuration and try again</em></p>
+        <div style="padding: 20px; border-radius: 8px; background: linear-gradient(135deg, #ffe6e6 0%, #ffcdd2 100%); border-left: 6px solid #f44336; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            <h3 style="color: #c62828; margin-top: 0;">❌ Analysis Error</h3>
+            
+            <div style="margin: 15px 0; padding: 12px; background: white; border-radius: 6px;">
+                <p style="margin: 0 0 8px 0;"><strong style="color: #c62828;">Error Details:</strong></p>
+                <p style="font-family: 'Courier New', monospace; font-size: 13px; background: #f5f5f5; padding: 8px; border-radius: 4px; margin: 0; word-wrap: break-word;">{str(e)}</p>
+            </div>
+            
+            <div style="margin: 15px 0; padding: 12px; background: rgba(255,255,255,0.7); border-radius: 6px;">
+                <p style="margin: 0; font-size: 14px; color: #555;">
+                    <strong>💡 Troubleshooting:</strong><br>
+                    • Check your OpenAI API key configuration<br>
+                    • Verify network connectivity<br>
+                    • Try with smaller log samples<br>
+                    • Check the console logs for more details
+                </p>
+            </div>
+            
+            <div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #ddd; font-size: 12px; color: #666;">
+                <strong>Error occurred at:</strong> {datetime.now().strftime('%H:%M:%S')}
+            </div>
         </div>
         """
 
@@ -254,15 +406,44 @@ def send_chatops_message(incident_id: str, message: str, channel: str) -> str:
         logger.info("ChatOps message prepared", incident_id=incident_id, channel=channel)
         
         return f"""
-        <div style="padding: 10px; border-radius: 5px; background-color: #f0f8ff;">
-            <h4>📤 ChatOps Message</h4>
-            <p><strong>Incident:</strong> {incident_id}</p>
-            <p><strong>Channel:</strong> {channel}</p>
-            <p><strong>Message:</strong> "{message}"</p>
-            <p><strong>Slack Integration:</strong> {slack_status}</p>
-            <p><strong>Time:</strong> {datetime.now().strftime('%H:%M:%S')}</p>
-            <div style="margin-top: 10px; padding: 8px; background-color: #e8f4f8; border-radius: 3px;">
-                <p><small><strong>Note:</strong> In production, this would send the message to the configured Slack channel and create or update an incident thread.</small></p>
+        <div style="padding: 20px; border-radius: 8px; background: linear-gradient(135deg, #f0f8ff 0%, #e3f2fd 100%); border-left: 6px solid #2196f3; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            <h3 style="color: #1565c0; margin-top: 0;">📤 ChatOps Message Ready</h3>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 15px 0;">
+                <div style="padding: 12px; background: white; border-radius: 6px;">
+                    <p style="margin: 0 0 4px 0; font-size: 12px; color: #666; text-transform: uppercase;">Incident ID</p>
+                    <p style="margin: 0; font-size: 16px; font-weight: bold; color: #1565c0;">{incident_id}</p>
+                </div>
+                <div style="padding: 12px; background: white; border-radius: 6px;">
+                    <p style="margin: 0 0 4px 0; font-size: 12px; color: #666; text-transform: uppercase;">Channel</p>
+                    <p style="margin: 0; font-size: 16px; font-weight: bold; color: #1565c0;">{channel}</p>
+                </div>
+            </div>
+            
+            <div style="margin: 15px 0; padding: 12px; background: white; border-radius: 6px;">
+                <p style="margin: 0 0 8px 0; font-size: 12px; color: #666; text-transform: uppercase;">Message Content</p>
+                <div style="background: #f8f9fa; padding: 12px; border-radius: 4px; border-left: 4px solid #2196f3;">
+                    <p style="margin: 0; font-size: 14px; line-height: 1.5; color: #333;">"{message}"</p>
+                </div>
+            </div>
+            
+            <div style="margin: 15px 0; padding: 12px; background: white; border-radius: 6px;">
+                <p style="margin: 0 0 8px 0; font-size: 12px; color: #666; text-transform: uppercase;">Integration Status</p>
+                <p style="margin: 0; font-size: 14px;">{slack_status}</p>
+            </div>
+            
+            <div style="margin: 15px 0; padding: 12px; background: rgba(33, 150, 243, 0.1); border-radius: 6px;">
+                <p style="margin: 0; font-size: 14px; color: #1565c0;">
+                    <strong>📋 Production Behavior:</strong><br>
+                    • Message will be sent to the configured Slack channel<br>
+                    • Incident thread will be created or updated<br>
+                    • Team members will receive real-time notifications<br>
+                    • Message history will be tracked for audit purposes
+                </p>
+            </div>
+            
+            <div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #ddd; font-size: 12px; color: #666;">
+                <strong>Message prepared at:</strong> {datetime.now().strftime('%H:%M:%S')}
             </div>
         </div>
         """

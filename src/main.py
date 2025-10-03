@@ -129,11 +129,11 @@ def main():
         
         # Mount Gradio app
         gradio_app = create_gradio_app()
-        gradio_app = gr.mount_gradio_app(app, gradio_app, path="/dashboard")
+        app = gr.mount_gradio_app(app, gradio_app, path="/")
         
         # Start the server
         uvicorn.run(
-            gradio_app,
+            app,
             host=config.app.host,
             port=config.app.port,
             log_level="info"
