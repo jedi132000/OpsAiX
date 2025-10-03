@@ -30,13 +30,15 @@ Deploy seamlessly across any cloud provider with our container-first, Kubernetes
 
 ### **🚀 Multi-Cloud Deployment Options**
 ```bash
-# Single-cloud deployment
+# Single-cloud deployment (choose your provider)
 ./deploy.sh --cloud aws --region us-east-1
+./deploy.sh --cloud azure --region eastus  
+./deploy.sh --cloud gcp --region us-central1
 
-# Multi-cloud active-active
-./deploy.sh --multi-cloud --primary aws --secondary azure
+# Multi-cloud active-active (all three providers)
+./deploy.sh --multi-cloud --primary aws --secondary azure --tertiary gcp
 
-# Hybrid cloud
+# Hybrid cloud with on-premises
 ./deploy.sh --hybrid --on-premises k8s-cluster --cloud gcp
 ```
 
@@ -271,7 +273,13 @@ cp .env.example .env.multicloud
 # Deploy to secondary cloud (Azure)  
 ./deploy.sh --cloud azure --region eastus
 
-# Enjoy enterprise-grade incident response! 🎉
+# Deploy to tertiary cloud (GCP)
+./deploy.sh --cloud gcp --region us-central1
+
+# Or deploy all at once for true multi-cloud
+./deploy.sh --multi-cloud --clouds aws,azure,gcp
+
+# Enjoy enterprise-grade incident response across all clouds! 🎉
 ```
 
 ***
